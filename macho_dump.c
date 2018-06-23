@@ -133,10 +133,6 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
       struct symtab_command *symtabl = macho_loader(object_file, the_offset, sizeof(struct symtab_command));
       printf("[*] Found Symbol Table at 0x%x and it has %d entries\n",symtabl->symoff, symtabl->nsyms);
       free(symtabl);
-    } else if (command->cmd == LC_SYMTAB){
-      struct symtab_command *symtabl = macho_loader(object_file, the_offset, sizeof(struct symtab_command));
-      printf("[*] Found Symbol Table at 0x%x and it has %d entries\n",symtabl->symoff, symtabl->nsyms);
-      free(symtabl);
     }
     the_offset += command->cmdsize;
     free(command);
