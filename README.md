@@ -99,6 +99,42 @@ After this, it is just a matter of printing the `entryoff` member of the `entry_
 To compile, run `gcc mach_dump.c -o mach_dump`
 Add paths as needed.
 
+### Example Output
+```bash
+MachDump v1.0 by GeoSn0w (@FCE365)
+
+Located Magic: 0xfeedface
+Swapped Magic: 0xcefaedfe
+[*] Found Mach-O 32-Bit Object File
+[*] Found CPU TYPE: 7
+[*] Found CPU SUBTYPE: 3
+[*] Found FLAGS: 0x01200085
+[*] Found Size: 1044 bytes
+===============================================
+[*] Found Segment: __PAGEZERO
+[*] Found Segment Memory Address (vmaddr): 0x0000000000000000
+[*] Found Segment Memory Size (vmsize): 0x0000000000001000
+[*] Found 0 structures in the segment
+===============================================
+[*] Found Segment: __TEXT
+[*] Found Segment Memory Address (vmaddr): 0x0000000000001000
+[*] Found Segment Memory Size (vmsize): 0x0000000000002000
+[*] Found 5 structures in the segment
+===============================================
+[*] Found Segment: __DATA
+[*] Found Segment Memory Address (vmaddr): 0x0000000000003000
+[*] Found Segment Memory Size (vmsize): 0x0000000000001000
+[*] Found 2 structures in the segment
+===============================================
+[*] Found Segment: __LINKEDIT
+[*] Found Segment Memory Address (vmaddr): 0x0000000000004000
+[*] Found Segment Memory Size (vmsize): 0x0000000000001000
+[*] Found 0 structures in the segment
+===============================================
+[*] Found Symbol Table at 0x31fc and it has 26 entries
+[*] Found Main Entry Offset: 0x1140
+iMac:~ geosn0w$ 
+```
 ### Contact Me
 Twitter: @FCE365 (https://twitter.com/FCE365)
 YouTube Channel (iOS/macOS related): http://youtube.com/fce365official
