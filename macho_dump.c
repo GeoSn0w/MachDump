@@ -10,10 +10,13 @@
 #include <mach-o/swap.h>
 #include <mach-o/loader.h>
 
+size_t read_size;
+unsigned char object_buffer[16];
+int i, c, offset;
 int is_feedfacf(uint32_t magic);
 void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t ncommands);
 void dump_seg_mach(FILE *object_file);
-
+void dump_hex_rep(FILE *object_file);
 
 int is_feedfacf(uint32_t magic){
   return magic == MH_MAGIC_64 || magic == MH_CIGAM_64;
@@ -54,7 +57,7 @@ uint32_t mach_magic(FILE *object_file, int offset){
   uint32_t magic;
   fseek(object_file, offset, SEEK_SET);
   fread(&magic, sizeof(uint32_t), 1, object_file);
-  printf("MachDump v1.0 by GeoSn0w (@FCE365)\n\nLocated Magic: 0x%x\nSwapped Magic: 0x%x\n", magic, NXSwapInt(magic));
+  printf("MachDump v1.1 by GeoSn0w (@FCE365)\n\n[i] Located Magic: 0x%x\n[i] Swapped Magic: 0x%x\n", magic, NXSwapInt(magic));
   return magic;
 }
 void dump_header(FILE *object_file, int offset, int is_64, int shouldSwap){
@@ -72,7 +75,7 @@ void dump_header(FILE *object_file, int offset, int is_64, int shouldSwap){
     printf("[*] Found CPU SUBTYPE: 0x%.2x\n",header->cpusubtype);
     printf("[*] Found FLAGS: 0x0%x\n",header->flags);
     printf("[*] Found Size: %d bytes\n",header->sizeofcmds);
-    printf("===============================================\n");
+    printf("===================================================================\n");
     lcmdoff += header_size;
     free(header);
   } else {
@@ -87,7 +90,7 @@ void dump_header(FILE *object_file, int offset, int is_64, int shouldSwap){
       printf("[*] Found CPU SUBTYPE: %d\n",header->cpusubtype);
       printf("[*] Found FLAGS: 0x0%x\n",header->flags);
       printf("[*] Found Size: %d bytes\n",header->sizeofcmds);
-      printf("===============================================\n");
+      printf("===================================================================\n");
     lcmdoff += header_size;
     free(header);
   }
@@ -107,10 +110,10 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
         swap_segment_command_64(segment, 0);
       }
       printf("[*] Found Segment: %s\n",segment->segname);
-      printf("[*] Found Segment Memory Address (vmaddr): 0x%016llx\n",segment->vmaddr);
-      printf("[*] Found Segment Memory Size (vmsize): 0x%016llx\n",segment->vmsize);
+      printf("[*] Found Segment Memory Address (vmaddr): \t 0x%016llx\n",segment->vmaddr);
+      printf("[*] Found Segment Memory Size (vmsize): \t 0x%016llx\n",segment->vmsize);
       printf("[*] Found %u structures in the segment\n",segment->nsects);
-      printf("===============================================\n");
+      printf("===================================================================\n");
       free(segment);
     } else if (command->cmd == LC_SEGMENT){
       struct segment_command *segment = macho_loader(object_file, the_offset, sizeof(struct segment_command));
@@ -118,10 +121,10 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
         swap_segment_command(segment, 0);
       }
       printf("[*] Found Segment: %s\n",segment->segname);
-      printf("[*] Found Segment Memory Address (vmaddr): 0x%016x\n",segment->vmaddr);
-      printf("[*] Found Segment Memory Size (vmsize): 0x%016x\n",segment->vmsize);
+      printf("[*] Found Segment Memory Address (vmaddr): \t 0x%016x\n",segment->vmaddr);
+      printf("[*] Found Segment Memory Size (vmsize): \t 0x%016x\n",segment->vmsize);
       printf("[*] Found %u structures in the segment\n",segment->nsects);
-      printf("===============================================\n");
+      printf("===================================================================\n");
       free(segment);
       //Try to retrieve main()'s address.
     } else if (command->cmd == LC_MAIN){
@@ -133,14 +136,39 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
       struct symtab_command *symtabl = macho_loader(object_file, the_offset, sizeof(struct symtab_command));
       printf("[*] Found Symbol Table at 0x%x and it has %d entries\n",symtabl->symoff, symtabl->nsyms);
       free(symtabl);
+    } else if (command->cmd == LC_SYMTAB){
+      struct symtab_command *symtabl = macho_loader(object_file, the_offset, sizeof(struct symtab_command));
+      printf("[*] Found Symbol Table at 0x%x and it has %d entries\n",symtabl->symoff, symtabl->nsyms);
+      free(symtabl);
     }
     the_offset += command->cmdsize;
     free(command);
   }
+  dump_hex_rep(object_file);
 }
 void dump_seg_mach(FILE *object_file){
   uint32_t magic = mach_magic(object_file, 0);
   int is_64 = is_feedfacf(magic);
   int shouldSwap = swap_bytes(magic);
   dump_header(object_file, 0, is_64, shouldSwap);
+}
+void dump_hex_rep(FILE *object_file){
+  fseek(object_file, 0, SEEK_SET); //Unwinf the file back to the start, offset 0.
+  printf("[i] Beginning the HEX dump of Mach-O object file...\n\n");
+  offset = 0;
+  while ((read_size = fread(object_buffer, 1, sizeof object_buffer, object_file)) > 0) {
+      printf("[*] %04x: ", offset);
+      offset += 16;
+      for (i = 0; i < 16; i++){
+        printf("%02x ", object_buffer[i]);
+      }
+      for (i = 0; i < 16; i++) {
+          c = object_buffer[i];
+          printf("%c", (c >= 33 && c <= 255 ? c : '.'));
+      }
+      printf("\n");
+  }
+  fclose(object_file);
+  printf("[*] EOF \n");
+  return;
 }
