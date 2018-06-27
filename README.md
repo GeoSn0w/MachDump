@@ -96,7 +96,13 @@ As you can see, the code is pretty simple. We iterate through the `ncommands` an
 After this, it is just a matter of printing the `entryoff` member of the `entry_point_command` which is of type `uint64_t` so we can use the `0x%llx` format specifier for `printf()`. Of course, `0x` is for cosmetic purposes to make it clear it is `hexadecimal` and the `llx` stands for `unsigned long long int` represented as `hexadecimal` by the `x` at the end. 
 
 ### Compiling
-To compile, run `gcc mach_dump.c -o mach_dump`
+To compile, run:
+```bash
+cd /folder where you have the source code
+make
+```
+Alternatively, you can compile it yourself with `gcc macho_dump.c -o MachDump`
+
 Add paths as needed.
 
 ### Example Output
