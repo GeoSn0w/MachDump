@@ -153,7 +153,7 @@ void dump_seg_mach(FILE *object_file){
   dump_header(object_file, 0, is_64, shouldSwap);
 }
 void dump_hex_rep(FILE *object_file){
-  fseek(object_file, 0, SEEK_SET); //Unwinf the file back to the start, offset 0.
+  fseek(object_file, 0, SEEK_SET); //Unwind the file back to the start, offset 0.
   printf("[i] Beginning the HEX dump of Mach-O object file...\n\n");
   offset = 0;
   while ((read_size = fread(object_buffer, 1, sizeof object_buffer, object_file)) > 0) {
