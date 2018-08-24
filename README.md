@@ -19,9 +19,27 @@ struct mach_header {
   uint32_t      flags;
 };
 ```
+However, the FAT Mach-O binary is a bit different. The FAT Mach-O contains usually two different architectures inside. Mostly both 64-Bit and 32-Bit but if you have an older Mach-O it may as well contain a 32-Bit and a Power-PC variant from back when Apple used to use those. The FAT Mach-O has a different format and a different magic. The magic for FAT Mach-Os is `0xcafebabe`.
+
+```c
+struct fat_header {
+	unsigned long	magic;		
+	unsigned long	nfat_arch;	// The number of archs contained.
+};
+
+struct fat_arch {
+	cpu_type_t	cputype;	
+	cpu_subtype_t	cpusubtype; 
+	unsigned long	offset;		
+	unsigned long	size;		
+	unsigned long	align;
+};
+
+```
 <p align="center">
   <img src="https://user-images.githubusercontent.com/15067741/41814439-efa01b16-7719-11e8-8900-3841fc7e72d5.png"/>
 </p>
+For simplicity, we'll not deal with FAT Mach-Os here. Yet.
 
 The `magic` is quite important. We can easily identify if a file is a Mach-O Object file just by parsing the magic. Of course, Mach-O files are of a big variety, but as long as the `magic` checks out, you can proceed with trying to parse the rest of the header. If it doesn't, you can call the quits. Either the file header was mangled or the file itself is not Mach-O.
 
