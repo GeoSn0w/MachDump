@@ -2,21 +2,36 @@
 //This tool dumps information from the 32-Bit and 64-Bit Mach-O binaries.
 //Thanks for inspiration: https://lowlevelbits.org/parsing-mach-o-files/
 //Happy dumping!
-//~GeoSn0w, June 24 2018
+//~GeoSn0w, June 24 2018 || Last update: February 8 2019
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <mach/machine.h>
 #include <string.h>
 #include <mach-o/swap.h>
 #include <mach-o/loader.h>
+#include <stdbool.h>
 
+struct {
+  uint32_t offset;
+  uint32_t size;
+} sig;
+
+const char *file_path;
 size_t read_size;
 unsigned char object_buffer[16];
 int i, c, offset;
+//void find_cd_hash(uint8_t *data, size_t size);
 int is_feedfacf(uint32_t magic);
 void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t ncommands);
 void dump_seg_mach(FILE *object_file);
 void dump_hex_rep(FILE *object_file);
+uint32_t swap_uint32( uint32_t val );
 
 int is_feedfacf(uint32_t magic){
   return magic == MH_MAGIC_64 || magic == MH_CIGAM_64;
@@ -29,18 +44,25 @@ int swap_bytes(uint32_t magic){
 int main(int argc, char *argv[]){
   if (argc < 2){
     printf("\n[!] Not feeding me any Mach-O file? It's ok. I can find the exit myself.\n");
-    printf("Usage: %s <mach-o 32/64-bit binary file path>\n\n", argv[0]);
+    printf("Usage: %s <mach-o 32/64-bit binary file path>\nAdditionally, you can specify --doHex to create a hex dump\n\n", argv[0]);
     exit(EXIT_FAILURE);
 
   } else if (argc == 2){
-    const char *file_path = argv[1];
-    FILE *object_file = fopen(file_path, "rb");
-    system("clear"); // Hell yee
-    dump_seg_mach(object_file); //We out here
-    fclose(object_file);
+      file_path = argv[1];
+      FILE *object_file = fopen(file_path, "rb");
+      system("clear"); // Hell yee
+      dump_seg_mach(object_file); //We out here
+      fclose(object_file);
     return 0;
-
-  } else if (argc > 2){
+  } else if (argc == 3 && strcmp(argv[2], "--doHex") ==0){
+      const char *file_path = argv[1];
+      FILE *object_file = fopen(file_path, "rb");
+      system("clear"); // Hell yee
+      dump_seg_mach(object_file); //We out here
+      dump_hex_rep(object_file);
+      fclose(object_file);
+    return 0;
+  } else if (argc > 3){
     printf("\nToo many commands!\nUsage: %s <mach-o 32/64-bit binary file path>\n\n", argv[0]);
     exit(EXIT_FAILURE);
   }
@@ -57,7 +79,7 @@ uint32_t mach_magic(FILE *object_file, int offset){
   uint32_t magic;
   fseek(object_file, offset, SEEK_SET);
   fread(&magic, sizeof(uint32_t), 1, object_file);
-  printf("MachDump v1.1 by GeoSn0w (@FCE365)\n\n[i] Located Magic: 0x%x\n[i] Swapped Magic: 0x%x\n", magic, NXSwapInt(magic));
+  printf("MachDump v1.2 by GeoSn0w (@FCE365)\n\n[i] Located Magic: 0x%x\n[i] Swapped Magic: 0x%x\n", magic, NXSwapInt(magic));
   return magic;
 }
 void dump_header(FILE *object_file, int offset, int is_64, int shouldSwap){
@@ -103,7 +125,6 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
     if (shouldSwap){
       swap_load_command(command, 0);
     }
-
     if (command->cmd == LC_SEGMENT_64){
       struct segment_command_64 *segment = macho_loader(object_file, the_offset, sizeof(struct segment_command_64));
       if (shouldSwap){
@@ -126,7 +147,16 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
       printf("[*] Found %u structures in the segment\n",segment->nsects);
       printf("===================================================================\n");
       free(segment);
-      //Try to retrieve main()'s address.
+    } else if (command->cmd == LC_CODE_SIGNATURE){
+      struct load_command *entry = macho_loader(object_file, the_offset, sizeof(struct load_command));
+           fread(&sig, sizeof(sig), 1, object_file);
+           fseek(object_file, the_offset+sig.offset, SEEK_SET);
+           size_t length = sig.size;
+           uint8_t *data = malloc(length);
+           fread(data, length, 1, object_file);
+           printf("[*] Found CodeSign Blob (Embedded signature) at offset %u!\n[*] CodeSign Blob is %zu bytes in size\n", sig.offset, length);
+      free(data);
+      free(entry);
     } else if (command->cmd == LC_MAIN){
       struct entry_point_command *entry = macho_loader(object_file, the_offset, sizeof(struct entry_point_command));
       printf("[*] Found Main Entry Offset: 0x%llx\n",entry->entryoff);
@@ -144,8 +174,8 @@ void dump_ncmds_mach(FILE *object_file, int offset, int shouldSwap, uint32_t nco
     the_offset += command->cmdsize;
     free(command);
   }
-  dump_hex_rep(object_file);
 }
+
 void dump_seg_mach(FILE *object_file){
   uint32_t magic = mach_magic(object_file, 0);
   int is_64 = is_feedfacf(magic);
